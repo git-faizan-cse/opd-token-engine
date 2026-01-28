@@ -29,3 +29,31 @@ export const createSlot = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSlotsByDoctor = async (req, res, next) => {
+  try {
+    const slots = await Slot.find({ doctorId: req.params.doctorId })
+      .populate("activeTokens")
+      .populate("waitingTokens");
+
+    res.json(slots);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSlotById = async (req, res, next) => {
+  try {
+    const slot = await Slot.findById(req.params.slotId)
+      .populate("activeTokens")
+      .populate("waitingTokens");
+
+    if (!slot) {
+      return res.status(404).json({ message: "Slot not found" });
+    }
+
+    res.json(slot);
+  } catch (error) {
+    next(error);
+  }
+};

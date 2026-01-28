@@ -64,18 +64,29 @@ export const cancelToken = async (req, res, next) => {
       return res.status(404).json({ message: "Slot not found" });
     }
 
-    // Remove from active tokens
-    slot.activeTokens = slot.activeTokens.filter(
-      (id) => id.toString() !== token._id.toString(),
-    );
+    let promotedToken = null;
+
+    // ✅ ONLY if token was ACTIVE
+    if (token.status === "ACTIVE") {
+      slot.activeTokens = slot.activeTokens.filter(
+        (id) => id.toString() !== token._id.toString(),
+      );
+
+      await slot.save();
+
+      promotedToken = await promoteWaitingToken(slot._id);
+    }
+
+    // If token was WAITING → just remove from waiting list
+    if (token.status === "WAITING") {
+      slot.waitingTokens = slot.waitingTokens.filter(
+        (id) => id.toString() !== token._id.toString(),
+      );
+      await slot.save();
+    }
 
     token.status = "CANCELLED";
-
     await token.save();
-    await slot.save();
-
-    // Promote waiting token if any
-    const promotedToken = await promoteWaitingToken(slot._id);
 
     res.json({
       message: "Token cancelled successfully",
@@ -95,29 +106,57 @@ export const markNoShow = async (req, res, next) => {
       return res.status(404).json({ message: "Token not found" });
     }
 
-    if (token.status !== "ACTIVE") {
+    if (token.status === "NO_SHOW") {
       return res
         .status(400)
-        .json({ message: "Only active tokens can be marked no-show" });
+        .json({ message: "Token already marked as no-show" });
     }
 
     const slot = await Slot.findById(token.slotId);
+    if (!slot) {
+      return res.status(404).json({ message: "Slot not found" });
+    }
 
-    slot.activeTokens = slot.activeTokens.filter(
-      (id) => id.toString() !== token._id.toString(),
-    );
+    let promotedToken = null;
+
+    // ✅ ONLY if token was ACTIVE
+    if (token.status === "ACTIVE") {
+      slot.activeTokens = slot.activeTokens.filter(
+        (id) => id.toString() !== token._id.toString(),
+      );
+
+      await slot.save();
+
+      promotedToken = await promoteWaitingToken(slot._id);
+    }
+
+    // If token was WAITING → just remove from waiting list
+    if (token.status === "WAITING") {
+      slot.waitingTokens = slot.waitingTokens.filter(
+        (id) => id.toString() !== token._id.toString(),
+      );
+      await slot.save();
+    }
 
     token.status = "NO_SHOW";
-
     await token.save();
-    await slot.save();
-
-    const promotedToken = await promoteWaitingToken(slot._id);
 
     res.json({
       message: "Token marked as no-show",
       promotedToken: promotedToken ? promotedToken._id : null,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAllTokens = async (req, res, next) => {
+  try {
+    const tokens = await Token.find()
+      .populate("doctorId", "name specialization")
+      .populate("slotId", "startTime endTime capacity");
+
+    res.json(tokens);
   } catch (error) {
     next(error);
   }

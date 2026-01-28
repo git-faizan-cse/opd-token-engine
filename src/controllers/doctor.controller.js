@@ -21,3 +21,12 @@ export const createDoctor = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAllDoctors = async (req, res, next) => {
+  try {
+    const doctors = await Doctor.find();
+    res.json(doctors);
+  } catch (error) {
+    next(error);
+  }
+};
