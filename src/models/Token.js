@@ -27,7 +27,7 @@ const tokenSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["ACTIVE", "WAITING", "CANCELLED", "COMPLETED"],
+      enum: ["ACTIVE", "WAITING", "CANCELLED", "COMPLETED", "NO_SHOW"],
       default: "WAITING",
     },
   },

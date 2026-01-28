@@ -73,3 +73,29 @@ export const allocateTokenToSlot = async (slotId, tokenId) => {
     message: "Token added to waiting list",
   };
 };
+
+export const promoteWaitingToken = async (slotId) => {
+  const slot = await Slot.findById(slotId).populate("waitingTokens");
+
+  if (!slot || slot.waitingTokens.length === 0) {
+    return null;
+  }
+
+  // Pick highest priority, then oldest
+  slot.waitingTokens.sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority; // lower = higher priority
+    }
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+
+  const tokenToPromote = slot.waitingTokens.shift();
+
+  tokenToPromote.status = "ACTIVE";
+  slot.activeTokens.push(tokenToPromote._id);
+
+  await tokenToPromote.save();
+  await slot.save();
+
+  return tokenToPromote;
+};
